@@ -168,12 +168,18 @@ module.exports = [
 	},
 
 	{
-		description: 'transpiles a subclass with super calls with spread argument',
+		description: 'transpiles a subclass with super calls with spread arguments',
 
 		input: `
 			class Foo extends Bar {
 				baz ( ...args ) {
 					super.baz(...args);
+				}
+				boz ( x, y, ...z ) {
+					super.boz(x, y, ...z);
+				}
+				fab ( x, ...y ) {
+					super.qux(...x, ...y);
 				}
 			}`,
 
@@ -192,6 +198,20 @@ module.exports = [
 					while ( len-- ) args[ len ] = arguments[ len ];
 
 					(ref = Bar.prototype).baz.apply(this, args);
+					var ref;
+				};
+				Foo.prototype.boz = function boz ( x, y ) {
+					var z = [], len = arguments.length - 2;
+					while ( len-- > 0 ) z[ len ] = arguments[ len + 2 ];
+
+					(ref = Bar.prototype).boz.apply(this, [ x, y ].concat( z ));
+					var ref;
+				};
+				Foo.prototype.fab = function fab ( x ) {
+					var y = [], len = arguments.length - 1;
+					while ( len-- > 0 ) y[ len ] = arguments[ len + 1 ];
+
+					(ref = Bar.prototype).qux.apply(this, x.concat( y ));
 					var ref;
 				};
 
