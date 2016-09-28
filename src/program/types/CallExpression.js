@@ -58,10 +58,16 @@ export default class CallExpression extends Node {
 
 				// we need to handle `super()` different, because `SuperClass.call.apply`
 				// isn't very helpful
-				const isSuper = this.callee.type === 'Super';
+				let _super = null;
+				if ( this.callee.type === 'Super' ) {
+					_super = this.callee;
+				}
+				else if ( this.callee.type === 'MemberExpression' && this.callee.object.type === 'Super' ) {
+					_super = this.callee.object;
+				}
 
-				if ( isSuper ) {
-					this.callee.noCall = true; // bit hacky...
+				if ( _super ) {
+					_super.noCall = true; // bit hacky...
 
 					if ( this.arguments.length > 1 ) {
 						if ( firstArgument.type !== 'SpreadElement' ) {
