@@ -168,6 +168,38 @@ module.exports = [
 	},
 
 	{
+		description: 'transpiles a subclass with super calls with spread argument',
+
+		input: `
+			class Foo extends Bar {
+				baz ( ...args ) {
+					super.baz(...args);
+				}
+			}`,
+
+		output: `
+			var Foo = (function (Bar) {
+				function Foo () {
+					Bar.apply(this, arguments);
+				}
+
+				if ( Bar ) Foo.__proto__ = Bar;
+				Foo.prototype = Object.create( Bar && Bar.prototype );
+				Foo.prototype.constructor = Foo;
+
+				Foo.prototype.baz = function baz () {
+					var args = [], len = arguments.length;
+					while ( len-- ) args[ len ] = arguments[ len ];
+
+					(ref = Bar.prototype).baz.apply(this, args);
+					var ref;
+				};
+
+				return Foo;
+			}(Bar));`
+	},
+
+	{
 		description: 'transpiles export default class',
 		options: { transforms: { moduleExport: false } },
 
