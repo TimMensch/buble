@@ -36,8 +36,8 @@ export default class CallExpression extends Node {
 
 			if ( hasSpreadElements ) {
 
-				// we need to handle `super()` different, because `SuperClass.call.apply`
-				// isn't very helpful
+				// we need to handle super() and super.method() differently
+				// due to its instance
 				let _super = null;
 				if ( this.callee.type === 'Super' ) {
 					_super = this.callee;
@@ -46,7 +46,7 @@ export default class CallExpression extends Node {
 					_super = this.callee.object;
 				}
 
-				if ( this.callee.type === 'MemberExpression' && !_super ) {
+				if ( !_super && this.callee.type === 'MemberExpression' ) {
 					if ( this.callee.object.type === 'Identifier' ) {
 						context = this.callee.object.name;
 					} else {
