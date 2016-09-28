@@ -181,6 +181,9 @@ module.exports = [
 				fab ( x, ...y ) {
 					super.qux(...x, ...y);
 				}
+				fob ( x, y, ...z ) {
+					((x, y, z) => super.qux(x, ...y, ...z))(x, y, z);
+				}
 			}`,
 
 		output: `
@@ -210,6 +213,13 @@ module.exports = [
 					while ( len-- > 0 ) y[ len ] = arguments[ len + 1 ];
 
 					Bar.prototype.qux.apply(this, x.concat( y ));
+				};
+				Foo.prototype.fob = function fob ( x, y ) {
+					var this$1 = this;
+					var z = [], len = arguments.length - 2;
+					while ( len-- > 0 ) z[ len ] = arguments[ len + 2 ];
+
+					(function (x, y, z) { return Bar.prototype.qux.apply(this$1, [ x ].concat( y, z )); })(x, y, z);
 				};
 
 				return Foo;
