@@ -197,22 +197,19 @@ module.exports = [
 					var args = [], len = arguments.length;
 					while ( len-- ) args[ len ] = arguments[ len ];
 
-					(ref = Bar.prototype).baz.apply(this, args);
-					var ref;
+					Bar.prototype.baz.apply(this, args);
 				};
 				Foo.prototype.boz = function boz ( x, y ) {
 					var z = [], len = arguments.length - 2;
 					while ( len-- > 0 ) z[ len ] = arguments[ len + 2 ];
 
-					(ref = Bar.prototype).boz.apply(this, [ x, y ].concat( z ));
-					var ref;
+					Bar.prototype.boz.apply(this, [ x, y ].concat( z ));
 				};
 				Foo.prototype.fab = function fab ( x ) {
 					var y = [], len = arguments.length - 1;
 					while ( len-- > 0 ) y[ len ] = arguments[ len + 1 ];
 
-					(ref = Bar.prototype).qux.apply(this, x.concat( y ));
-					var ref;
+					Bar.prototype.qux.apply(this, x.concat( y ));
 				};
 
 				return Foo;
