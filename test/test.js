@@ -71,24 +71,24 @@ describe( 'buble', () => {
 
 				var command = fs.readFileSync( commandFile, 'utf-8' )
 					.replace( 'buble', 'node "' + binFile + '"' );
-				child_process.exec( command, {
+				child_process.exec(command, {
 					cwd: dir
-				}, ( err, stdout, stderr ) => {
-					if ( err ) return done( err );
+				}, (err, stdout, stderr) => {
+					if (err) return done(err);
 
-					if ( stdout ) console.log( stdout );
-					if ( stderr ) console.error( stderr );
+					if (stdout) console.log(stdout);
+					if (stderr) console.error(stderr);
 
-					function catalogue ( subdir ) {
-						subdir = path.resolve( dir, subdir );
+					function catalogue(subdir) {
+						subdir = path.resolve(dir, subdir);
 
-						return glob.sync( '**/*.js?(.map)', { cwd: subdir })
+						return glob.sync('**/*.js?(.map)', { cwd: subdir })
 							.sort()
-							.map( name => {
-								var contents = fs.readFileSync( path.resolve( subdir, name ), 'utf-8' ).trim();
+							.map(name => {
+								var contents = fs.readFileSync(path.resolve(subdir, name), 'utf-8').trim();
 
-								if ( path.extname( name ) === '.map' ) {
-									contents = JSON.parse( contents );
+								if (path.extname(name) === '.map') {
+									contents = JSON.parse(contents);
 								}
 
 								return {
@@ -98,8 +98,13 @@ describe( 'buble', () => {
 							});
 					}
 
-					var expected = catalogue( 'expected' );
-					var actual = catalogue( 'actual' );
+					var expected = catalogue('expected');
+					var actual = catalogue('actual').map((ob) => {
+						if (typeof ob.contents === "string") {
+							ob.contents = ob.contents.replace(/\r\n/g, "\n");
+						}
+						return ob;
+					});
 
 					try {
 						assert.deepEqual( actual, expected );
