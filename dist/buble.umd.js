@@ -972,6 +972,14 @@
 
   	ArrayExpression.prototype.transpile = function transpile ( code, transforms ) {
   		if ( transforms.spreadRest ) {
+  			// erase trailing comma after last array element if not an array hole
+  			if ( this.elements.length ) {
+  				var lastElement = this.elements[ this.elements.length - 1 ];
+  				if ( lastElement && /\s*,/.test( code.original.slice( lastElement.end, this.end ) ) ) {
+  					code.overwrite( lastElement.end, this.end - 1, ' ' );
+  				}
+  			}
+
   			if ( this.elements.length === 1 ) {
   				var element = this.elements[0];
 
@@ -985,7 +993,6 @@
   					}
   				}
   			}
-
   			else {
   				var hasSpreadElements = spread( code, this.elements, this.start, this.argumentsArrayAlias );
 
@@ -1348,7 +1355,10 @@
   				var declarators = [];
   				if ( needsObjectVar ) declarators.push( object );
   				if ( needsPropertyVar ) declarators.push( property );
-  				code.insertRight( statement.start, ("var " + (declarators.join( ', ' )) + ";\n" + i0) );
+
+  				if ( declarators.length ) {
+  					code.insertRight( statement.start, ("var " + (declarators.join( ', ' )) + ";\n" + i0) );
+  				}
 
   				if ( needsObjectVar && needsPropertyVar ) {
   					code.insertRight( left.start, ("( " + object + " = ") );
@@ -1370,7 +1380,9 @@
   					code.remove( left.property.end, left.end );
   				}
 
-  				code.insertLeft( this.end, " )" );
+  				if ( needsPropertyVar ) {
+  					code.insertLeft( this.end, " )" );
+  				}
   			}
 
   			base = object + ( left.computed || needsPropertyVar ? ("[" + property + "]") : ("." + property) );
@@ -1630,13 +1642,24 @@
   					return;
   				}
 
-  				if ( method.static ) code.remove( method.start, method.start + 7 );
+  				if ( method.static ) {
+  					var len = code.original[ method.start + 6 ] == ' ' ? 7 : 6;
+  					code.remove( method.start, method.start + len );
+  				}
 
   				var isAccessor = method.kind !== 'method';
   				var lhs;
 
   				var methodName = method.key.name;
   				if ( scope.contains( methodName ) || reserved[ methodName ] ) methodName = scope.createIdentifier( methodName );
+
+  				// when method name is a string or a number let's pretend it's a computed method
+
+  				var fake_computed = false;
+  				if ( ! method.computed && method.key.type === 'Literal' ) {
+  					fake_computed = true;
+  					method.computed = true;
+  				}
 
   				if ( isAccessor ) {
   					if ( method.computed ) {
@@ -1671,8 +1694,13 @@
 
   				var c = method.key.end;
   				if ( method.computed ) {
-  					while ( code.original[c] !== ']' ) c += 1;
-  					c += 1;
+  					if ( fake_computed ) {
+  						code.insertRight( method.key.start, '[' );
+  						code.insertLeft( method.key.end, ']' );
+  					} else {
+  						while ( code.original[c] !== ']' ) c += 1;
+  						c += 1;
+  					}
   				}
 
   				code.insertRight( method.start, lhs );
@@ -2714,8 +2742,12 @@
   			for ( i = 0; i < children.length; i += 1 ) {
   				var child = children[i];
 
-  				var tail = code.original[ c ] === '\n' && child.type !== 'Literal' ? '' : ' ';
-  				code.insertLeft( c, ("," + tail) );
+  				if ( child.type === 'JSXExpressionContainer' && child.expression.type === 'JSXEmptyExpression' ) {
+  					// empty block is a no op
+  				} else {
+  					var tail = code.original[ c ] === '\n' && child.type !== 'Literal' ? '' : ' ';
+  					code.insertLeft( c, ("," + tail) );
+  				}
 
   				if ( child.type === 'Literal' ) {
   					var str = normalise( child.value, i === children.length - 1 );
@@ -6232,7 +6264,7 @@
   				name = this.findScope( true ).createIdentifier( 'obj' );
 
   				var statement = this.findNearest( /(?:Statement|Declaration)$/ );
-  				code.insertRight( statement.start, ("var " + name + ";\n" + i0) );
+  				code.insertLeft( statement.end, ("\n" + i0 + "var " + name + ";") );
 
   				code.insertRight( this.start, ("( " + name + " = ") );
   			}
@@ -6274,8 +6306,6 @@
   					if ( prop$2.method && transforms.conciseMethodProperty ) {
   						code.insertRight( prop$2.value.start, 'function ' );
   					}
-
-  					deindent( prop$2.value, code );
   				}
   			}
 
@@ -6307,7 +6337,13 @@
   			if ( this.shorthand ) {
   				code.insertRight( this.start, ((this.key.name) + ": ") );
   			} else if ( this.method ) {
-  				var name = this.findScope( true ).createIdentifier( this.key.type === 'Identifier' ? this.key.name : this.key.value );
+  				var name;
+  				if ( this.key.type === 'Literal' && typeof this.key.value === 'number' ) {
+  					name = "";
+  				} else {
+  					name = this.findScope( true ).createIdentifier( this.key.type === 'Identifier' ? this.key.name : this.key.value );
+  				}
+
   				if ( this.value.generator ) code.remove( this.start, this.key.start );
   				code.insertLeft( this.key.end, (": function" + (this.value.generator ? '*' : '') + " " + name) );
   			}
@@ -6965,6 +7001,8 @@
 
   	createIdentifier: function createIdentifier ( base ) {
   		var this$1 = this;
+
+  		if ( typeof base === 'number' ) base = base.toString();
 
   		base = base
   			.replace( /\s/g, '' )
