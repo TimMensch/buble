@@ -5860,7 +5860,18 @@
   			}
 
   			if ( hasSpreadElements ) {
-  				if ( this.callee.type === 'MemberExpression' ) {
+
+  				// we need to handle super() and super.method() differently
+  				// due to its instance
+  				var _super = null;
+  				if ( this.callee.type === 'Super' ) {
+  					_super = this.callee;
+  				}
+  				else if ( this.callee.type === 'MemberExpression' && this.callee.object.type === 'Super' ) {
+  					_super = this.callee.object;
+  				}
+
+  				if ( !_super && this.callee.type === 'MemberExpression' ) {
   					if ( this.callee.object.type === 'Identifier' ) {
   						context = this.callee.object.name;
   					} else {
@@ -5881,12 +5892,8 @@
 
   				code.insertLeft( this.callee.end, '.apply' );
 
-  				// we need to handle `super()` different, because `SuperClass.call.apply`
-  				// isn't very helpful
-  				var isSuper = this.callee.type === 'Super';
-
-  				if ( isSuper ) {
-  					this.callee.noCall = true; // bit hacky...
+  				if ( _super ) {
+  					_super.noCall = true; // bit hacky...
 
   					if ( this.arguments.length > 1 ) {
   						if ( firstArgument.type !== 'SpreadElement' ) {
