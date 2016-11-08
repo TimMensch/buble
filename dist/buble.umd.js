@@ -6653,11 +6653,9 @@
   			var arrowFunction = this.findNearest( 'ArrowFunctionExpression' );
   			var loop = this.findNearest( loopStatement );
 
-  			if ( arrowFunction && arrowFunction.depth > lexicalBoundary.depth ) {
-  				this.alias = lexicalBoundary.getThisAlias();
-  			}
-
-  			if ( loop && loop.body.contains( this ) && loop.depth > lexicalBoundary.depth ) {
+  			if ( ( arrowFunction && arrowFunction.depth > lexicalBoundary.depth )
+  			|| ( loop && loop.body.contains( this ) && loop.depth > lexicalBoundary.depth )
+  			|| ( loop && loop.right && loop.right.contains( this ) ) ) {
   				this.alias = lexicalBoundary.getThisAlias();
   			}
   		}
@@ -7494,7 +7492,7 @@
   	'reservedProperties'
   ];
 
-  var version = "0.14.1";
+  var version = "0.14.2";
 
   var ref = [
   	acornObjectSpread,
