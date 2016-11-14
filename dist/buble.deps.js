@@ -10625,6 +10625,9 @@
   			} else if ( this.parent.type === 'AssignmentExpression' && this.parent.parent.type === 'ExpressionStatement' && this.parent.left.type === 'Identifier' ) {
   				isSimpleAssignment = true;
   				name = this.parent.left.alias || this.parent.left.name; // TODO is this right?
+  			} else if ( this.parent.type === 'AssignmentPattern' && this.parent.left.type === 'Identifier' ) {
+  				isSimpleAssignment = true;
+  				name = this.parent.left.alias || this.parent.left.name; // TODO is this right?
   			}
 
   			// handle block scoping
@@ -10966,6 +10969,7 @@
 
   			var parenthesise = ( this.quasis.length !== 1 || this.expressions.length !== 0 ) &&
   			                     this.parent.type !== 'AssignmentExpression' &&
+  			                     this.parent.type !== 'AssignmentPattern' &&
   			                     this.parent.type !== 'VariableDeclarator' &&
   			                     ( this.parent.type !== 'BinaryExpression' || this.parent.operator !== '+' );
 
@@ -11184,6 +11188,7 @@
   			}
   		}
 
+  		if ( this.id ) this.id.transpile( code, transforms );
   		if ( this.init ) this.init.transpile( code, transforms );
   	};
 
