@@ -227,4 +227,17 @@ module.exports = [
 				};
 		`
 	},
+
+	{
+		description: 'object literal with computed property within arrow expression (#126)',
+
+		input: `
+			foo => bar({[x - y]: obj});
+		`,
+		output: `
+			(function(foo) { return bar(( obj$1 = {}, obj$1[x - y] = obj, obj$1 ))
+				var obj$1;; });
+		`
+	},
+
 ];
