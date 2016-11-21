@@ -6203,14 +6203,21 @@
 
   		Node.prototype.transpile.call( this, code, transforms );
 
+  		var firstPropertyStart = this.start + 1;
+  		var regularPropertyCount = 0;
   		var spreadPropertyCount = 0;
   		var computedPropertyCount = 0;
 
   		for ( var i$2 = 0, list = this.properties; i$2 < list.length; i$2 += 1 ) {
   			var prop = list[i$2];
 
-  			if ( prop.type === 'SpreadProperty' ) spreadPropertyCount += 1;
-  			if ( prop.computed ) computedPropertyCount += 1;
+  			if ( prop.type === 'SpreadProperty' ) {
+  				spreadPropertyCount += 1;
+  			} else if ( prop.computed ) {
+  				computedPropertyCount += 1;
+  			} else if ( prop.type === 'Property' ) {
+  				regularPropertyCount += 1;
+  			}
   		}
 
   		if ( spreadPropertyCount ) {
@@ -6219,25 +6226,28 @@
   			}
   			// enclose run of non-spread properties in curlies
   			var i = this.properties.length;
-  			while ( i-- ) {
-  				var prop$1 = this$1.properties[i];
+  			if ( regularPropertyCount ) {
+  				while ( i-- ) {
+  					var prop$1 = this$1.properties[i];
 
-  				if ( prop$1.type === 'Property' ) {
-  					var lastProp = this$1.properties[ i - 1 ];
-  					var nextProp = this$1.properties[ i + 1 ];
+  					if ( prop$1.type === 'Property' && !prop$1.computed ) {
+  						var lastProp = this$1.properties[ i - 1 ];
+  						var nextProp = this$1.properties[ i + 1 ];
 
-  					if ( !lastProp || lastProp.type !== 'Property' ) {
-  						code.insertRight( prop$1.start, '{' );
-  					}
+  						if ( !lastProp || lastProp.type !== 'Property' || lastProp.computed ) {
+  							code.insertRight( prop$1.start, '{' );
+  						}
 
-  					if ( !nextProp || nextProp.type !== 'Property' ) {
-  						code.insertLeft( prop$1.end, '}' );
+  						if ( !nextProp || nextProp.type !== 'Property' || nextProp.computed ) {
+  							code.insertLeft( prop$1.end, '}' );
+  						}
   					}
   				}
   			}
 
   			// wrap the whole thing in Object.assign
-  			code.overwrite( this.start, this.properties[0].start, ((this.program.objectAssign) + "({}, "));
+  			firstPropertyStart = this.properties[0].start;
+  			code.overwrite( this.start, firstPropertyStart, ((this.program.objectAssign) + "({}, "));
   			code.overwrite( this.properties[ this.properties.length - 1 ].end, this.end, ')' );
   		}
 
@@ -6246,9 +6256,6 @@
 
   			var isSimpleAssignment;
   			var name;
-
-  			var start;
-  			var end;
 
   			if ( this.parent.type === 'VariableDeclarator' && this.parent.parent.declarations.length === 1 ) {
   				isSimpleAssignment = true;
@@ -6265,8 +6272,8 @@
   			var declaration = this.findScope( false ).findDeclaration( name );
   			if ( declaration ) name = declaration.name;
 
-  			start = this.start + 1;
-  			end = this.end;
+  			var start = firstPropertyStart;
+  			var end = this.end;
 
   			if ( isSimpleAssignment ) {
   				// ???
@@ -6281,6 +6288,7 @@
 
   			var len = this.properties.length;
   			var lastComputedProp;
+  			var sawNonComputedProperty = false;
 
   			for ( var i$1 = 0; i$1 < len; i$1 += 1 ) {
   				var prop$2 = this$1.properties[i$1];
@@ -6305,7 +6313,7 @@
   					code.insertLeft( c, ' = ' );
   					code.move( moveStart, prop$2.end, end );
 
-  					if ( i$1 === 0 && len > 1 ) {
+  					if ( i$1 < len - 1 && ! sawNonComputedProperty ) {
   						// remove trailing comma
   						c = prop$2.end;
   						while ( code.original[c] !== ',' ) c += 1;
@@ -6316,6 +6324,8 @@
   					if ( prop$2.method && transforms.conciseMethodProperty ) {
   						code.insertRight( prop$2.value.start, 'function ' );
   					}
+  				} else {
+  					sawNonComputedProperty = true;
   				}
   			}
 
